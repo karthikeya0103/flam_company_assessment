@@ -24,23 +24,28 @@ const MOCK_USERS = [
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isReady, setIsReady] = useState(false);
 
   // Load user from localStorage on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('authUser');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
+    // Check if we're running in the browser
+    if (typeof window !== 'undefined') {
+      const storedUser = localStorage.getItem('authUser');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+      setIsReady(true);
     }
   }, []);
 
   // Save user to localStorage when logged in
   useEffect(() => {
-    if (user) {
+    if (typeof window !== 'undefined' && isReady && user) {
       localStorage.setItem('authUser', JSON.stringify(user));
-    } else {
+    } else if (typeof window !== 'undefined' && isReady) {
       localStorage.removeItem('authUser');
     }
-  }, [user]);
+  }, [user, isReady]);
 
   const login = (email, password) => {
     const foundUser = MOCK_USERS.find(
@@ -58,12 +63,29 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
   };
 
+  const isAuthenticated = !!user;
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated, isReady }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-// Custom hook for easy usage
-export const useAuth = () => useContext(AuthContext);
+// Custom hook for easy usage - with fallback default value for SSR
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  
+  // Return default values if context is undefined (during SSR)
+  if (context === undefined) {
+    return {
+      user: null,
+      login: () => ({ success: false, message: 'Auth not initialized' }),
+      logout: () => {},
+      isAuthenticated: false,
+      isReady: false
+    };
+  }
+  
+  return context;
+};

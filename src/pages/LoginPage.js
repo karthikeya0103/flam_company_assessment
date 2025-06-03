@@ -5,15 +5,15 @@ import LoginForm from '../components/LoginForm';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isReady } = useAuth();
   const router = useRouter();
   
-  // Redirect if already logged in
+  // Redirect if already logged in - but only after auth is ready
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isReady && isAuthenticated) {
       router.push('/dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, isReady, router]);
 
   return (
     <>
